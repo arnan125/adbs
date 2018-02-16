@@ -1,6 +1,3 @@
 #!/bin/sh
 
 echo 'post commit'
-
-
-qwertyu
