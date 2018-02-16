@@ -1,5 +1,52 @@
-test
-test2
-test3
+#!/usr/bin/env node
 
-dev3
+const execSync = require('child_process').execSync
+const SWITCH = 'git checkout'
+const CREATE = 'git checkout -b'
+const CHECK = 'git branch -a | grep remotes\/origin\/'
+const PULL = 'git pull'
+const PUSH = 'git push origin'
+const MERGE = 'git merge'
+const CURRENT_BRANCH = `git branch | awk '/\\*/ { print $2; }'`
+
+function command (cmd, msg, abort) {
+  var result
+  try {
+    result = execSync(cmd)
+  } catch (e) {
+    if (abort) throw new Error(msg || e)
+    else console.error(msg || e)
+  }
+  return result
+}
+
+let branch = inspect()
+if (!branch) return
+
+let currentBranch = (command(CURRENT_BRANCH) || '').toString().trim()
+execSync(`${PUSH} ${currentBranch}`)
+
+let needCreate = !((command(`${CHECK}${branch}`) || '').toString().trim())
+if (needCreate) command(`${CREATE} ${branch}`)
+else command(`${SWITCH} ${branch}`)
+
+if (!needCreate) command(`${PULL}`)
+
+command(`${MERGE} ${currentBranch} -m 'auto merge'`, '自动merge终止', true)
+
+command(`${PUSH} ${branch}`)
+
+function inspect () {
+  let msg
+  let mergeinfo
+  let branch
+
+  try {
+    msg = (execSync('git log -1 HEAD') || '').toString().split(/\n/)
+    mergeinfo= msg.slice(3).join('').match(/#merge\s+(\w+)#/i)
+    branch = mergeinfo && mergeinfo[1]
+  } catch (e) {
+    console.log(e)
+  }
+  return branch
+}  
